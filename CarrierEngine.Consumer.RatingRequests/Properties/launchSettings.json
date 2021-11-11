@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "CarrierEngine.Consumer.TrackingRequests": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
