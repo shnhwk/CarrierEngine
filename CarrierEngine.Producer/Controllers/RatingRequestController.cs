@@ -32,7 +32,7 @@ namespace CarrierEngine.Producer.Controllers
 
             try
             {
-                await QueueHelper.SentToMessageQueue<RatingRequestDto>(ratingRequestDto, RabbitMqConstants.RatingRequestQueue, _bus);
+                await QueueHelper.SentToMessageQueue<RatingRequestDto>(ratingRequestDto, RabbitMqConstants.RatingRequestQueue, _bus, NewId.NextGuid());
             }
             catch (Exception ex)
             {

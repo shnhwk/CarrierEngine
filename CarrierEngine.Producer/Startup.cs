@@ -9,14 +9,14 @@ using MassTransit;
 using Microsoft.OpenApi.Models;
 
 namespace CarrierEngine.Producer
-{
+{ 
     public class Startup
     {
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
-
+         
         public IConfiguration Configuration { get; }
 
         public void ConfigureServices(IServiceCollection services)
@@ -32,7 +32,7 @@ namespace CarrierEngine.Producer
                     });
                 }));
             });
-            services.AddMassTransitHostedService();
+            //services.AddMassTransitHostedService();
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {

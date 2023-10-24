@@ -2,7 +2,8 @@
 {
     public class RabbitMqConstants
     { 
-        public const string RabbitMqRootUri = "rabbitmq://guest:guest@172.17.0.2:5672";
+        //public const string RabbitMqRootUri = "rabbitmq://guest:guest@172.17.0.2:5672";
+        public const string RabbitMqRootUri = "rabbitmq://guest:guest@localhost:5672";
         public const string UserName = "guest";
         public const string Password = "guest";
 

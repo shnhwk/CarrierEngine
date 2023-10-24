@@ -1,10 +1,8 @@
-﻿using MassTransit;
-using System;
-using CarrierEngine.Consumer.RatingRequests;
+﻿using System;
 using CarrierEngine.Domain;
-using GreenPipes;
+using MassTransit;
 
-namespace CarrierEngine.Consumer.TrackingRequests
+namespace CarrierEngine.Consumer.RatingRequests
 {
     class Program
     {
