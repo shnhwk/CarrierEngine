@@ -107,17 +107,17 @@ public class MassTransitService : IHostedService
 }
 
 
-public static class CustomJsonSerializer
-{
-    private static readonly JsonSerializerOptions serializerSettings =
-        new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+//public static class CustomJsonSerializer
+//{
+//    private static readonly JsonSerializerOptions serializerSettings =
+//        new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-    public static T Deserialize<T>(this string json)
-    {
-        return JsonSerializer.Deserialize<T>(json, serializerSettings);
-    }
-    // etc.
-}
+//    public static T Deserialize<T>(this string json)
+//    {
+//        return JsonSerializer.Deserialize<T>(json, serializerSettings);
+//    }
+//    // etc.
+//}
 
 
 
@@ -147,8 +147,8 @@ public class SerilogEnricherFilter<T> : IFilter<T> where T : class, PipeContext
 {
     public void Probe(ProbeContext context)
     {
-        var scope = context.CreateFilterScope("SerilogEnricher");
-        scope.Add("CorrelationId", NewId.NextGuid());
+        //var scope = context.CreateFilterScope("SerilogEnricher");
+       // scope.Add("CorrelationId", NewId.NextGuid());
     }
 
     public async Task Send(T context, IPipe<T> next)

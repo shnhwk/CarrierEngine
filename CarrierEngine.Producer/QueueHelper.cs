@@ -1,7 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
-using CarrierEngine.Domain;
+﻿using CarrierEngine.Domain;
 using MassTransit;
+using System;
+using System.Threading.Tasks;
 
 namespace CarrierEngine.Producer
 {
@@ -15,7 +15,12 @@ namespace CarrierEngine.Producer
             var uri = new Uri(url);
             var endPoint = await bus.GetSendEndpoint(uri);
 
-            await endPoint.Send(objectToSend, context => context.CorrelationId = correlationId);
+            // await endPoint.Send(objectToSend, context => context.CorrelationId = correlationId);
+            await endPoint.Send(objectToSend, context =>
+            {
+                context.CorrelationId = correlationId;
+                context.Headers.Set("BanyanLoadId", 1234);
+            });
         }
     }
 }
