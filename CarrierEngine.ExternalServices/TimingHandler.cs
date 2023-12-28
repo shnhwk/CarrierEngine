@@ -16,8 +16,7 @@ namespace CarrierEngine.ExternalServices
         {
             _logger = logger;
         }
-
-
+        
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         { 
             HttpResponseMessage response = null;
@@ -25,18 +24,22 @@ namespace CarrierEngine.ExternalServices
 
             try
             {
-               
                 response = await base.SendAsync(request, cancellationToken);
                 sw.Stop();
             }
             catch (Exception ex)
             {
+                sw.Stop();
                 _logger.LogError(ex, "");
+
                 throw;
             }
             finally
             {
-                _logger.LogInformation($"Finished request in {sw.ElapsedMilliseconds}ms");
+                if (sw.IsRunning)
+                    sw.Stop();
+
+                _logger.LogInformation("Finished request in {ElapsedMilliseconds}ms", sw.ElapsedMilliseconds);
 
                 var scope = new Dictionary<string, object>();
 

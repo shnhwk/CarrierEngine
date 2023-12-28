@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using CarrierEngine.Domain.Dtos;
+using CarrierEngine.ExternalServices.Carriers.ExampleCarrier2;
 using CarrierEngine.ExternalServices.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -24,42 +25,26 @@ namespace CarrierEngine.Consumer.TrackingRequests
         {
 
             _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} started at {ProcessingStartDate}",
-                context.Message.BanyanLoadId, DateTime.Now);
+                context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
 
-            var a = _carrierFactory.GetCarrier<ITracking>(context.Message.CarrierClassName);
+            var a = _carrierFactory.GetCarrier<BaseCarrier>(context.Message.CarrierClassName);
 
-            if (a != null)
-            {
-                var result = await a.TrackLoad(context.Message);
+            if (a is ITracking tracking)
+            { 
+                var result = await tracking.TrackLoad(context.Message);
+
+                var returnObject = new TrackingResponseDto()
+                {
+                    BanyanLoadId = context.Message.BanyanLoadId,
+                    Message = result.Message
+                };
             }
 
+       
 
+            _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} finished at {ProcessingCompleteDateUtc}.",
+                context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
 
-            var returnObject = new TrackingResponseDto()
-            {
-                BanyanLoadId = context.Message.BanyanLoadId,
-                Message = await GetRandomTrackingUpdate()
-            };
-
-
-            _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} finished at {ProcessingCompleteDate}.",
-                context.Message.BanyanLoadId, DateTime.Now);
-
-        }
-
-
-        private static async Task<string> GetRandomTrackingUpdate()
-        {
-
-            await Task.Delay(TimeSpan.FromSeconds(new Random().Next(0, 4)));
-
-            return new Random().Next(0, 4) switch
-            {
-                0 => "Load has been picked up",
-                1 => "Load in transit",
-                2 => "Load is delayed",
-                _ => "Load has been delivered",
-            };
         }
     }
 }

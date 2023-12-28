@@ -71,6 +71,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<MassTransitService>();
         services.AddScoped<ICarrierFactory, CarrierFactory>();
 
+ 
+
         services.Scan(scan => scan
             .FromAssemblyOf<ITracking>() // 1. Find the concrete classes
             .AddClasses()        //    to register
@@ -154,12 +156,11 @@ public class SerilogEnricherFilter<T> : IFilter<T> where T : class, PipeContext
     public async Task Send(T context, IPipe<T> next)
     {
         var consumeContext = context.GetPayload<ConsumeContext>();
-
-        using (LogContext.PushProperty(nameof(consumeContext.ConversationId), consumeContext.ConversationId.GetValueOrDefault().ToString()))
+ 
         using (LogContext.PushProperty(nameof(consumeContext.CorrelationId), consumeContext.CorrelationId.GetValueOrDefault().ToString()))
-        using (LogContext.PushProperty(nameof(consumeContext.InitiatorId), consumeContext.InitiatorId.GetValueOrDefault().ToString()))
         using (LogContext.PushProperty(nameof(consumeContext.MessageId), consumeContext.MessageId.GetValueOrDefault().ToString()))
         using (LogContext.PushProperty(nameof(consumeContext.RequestId), consumeContext.RequestId.GetValueOrDefault().ToString()))
+        using (LogContext.PushProperty("BanyanLoadId", consumeContext.GetHeader<int>("BanyanLoadId", -1)))
         {
             try
             {

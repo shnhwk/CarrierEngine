@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
+using CarrierEngine.Domain;
 using CarrierEngine.Domain.Dtos;
 using CarrierEngine.ExternalServices.Carriers.ExampleCarrier.Dtos;
 using CarrierEngine.ExternalServices.Interfaces;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2
 {
-    public class ExampleCarrier2 : ITracking
+    public class ExampleCarrier2 : BaseCarrier, ITracking
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<ExampleCarrier2> _logger;
-     
-        public ExampleCarrier2(IHttpClientFactory httpClientFactory, ILogger<ExampleCarrier2> logger)
+
+        public ExampleCarrier2(IHttpClientFactory httpClientFactory, ILogger<ExampleCarrier2> logger) : base(logger)
         {
             _httpClientFactory = httpClientFactory;
-            _logger = logger; 
+            _logger = logger;
         }
 
         public async Task<TrackingResponseDto> TrackLoad(TrackingRequestDto trackingRequest)
@@ -43,10 +44,9 @@ namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2
                     return trackingResponse;
                 }
 
-                var serializerSettings =
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-                var test = JsonSerializer.Deserialize<TrackingResponse>(responseContent, serializerSettings);
+                var test = responseContent.Deserialize<TrackingResponse>();
+
 
                 return new TrackingResponseDto()
                 {
@@ -69,6 +69,27 @@ namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2
                 return trackingResponse;
             }
         }
- 
+
     }
+
+
+    public abstract class BaseCarrier
+    {
+        private readonly ILogger _logger;
+        private int LoadId { get; set; }
+
+        protected BaseCarrier(ILogger logger)
+        {
+            _logger = logger;
+        }
+
+        public BaseCarrier For(int loadId)
+        {
+            this.LoadId = loadId;
+ 
+
+                return this;
+        }
+    }
+
 }

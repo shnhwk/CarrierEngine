@@ -77,4 +77,16 @@ namespace CarrierEngine.Domain.Dtos
         public const string PlatformId = "69D9CAB7-6BD0-4EDC-BF14-649FA656AEEF";
          */
     }
+
+
+    class BanyanTrackingCodes
+    {
+        public int CodeId { get; set; }
+
+        public string Code { get; set;}
+        
+        public string Message { get; set; }
+
+    }
+
 }
