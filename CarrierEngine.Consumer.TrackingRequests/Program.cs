@@ -22,6 +22,7 @@ using LogContext = Serilog.Context.LogContext;
 //create the logger and setup your sinks, filters and properties
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
+    .MinimumLevel.Verbose()
     .WriteTo.Console()
     .WriteTo.Seq("http://localhost:5341/")
     .CreateBootstrapLogger();
@@ -29,7 +30,7 @@ Log.Logger = new LoggerConfiguration()
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
-        services.AddTransient<TimingHandler>();
+       // services.AddTransient<TimingHandler>();
       //  services.AddScoped<IRequestResponseLogger, RequestResponseLogger>();
 
         services.AddMassTransit(x =>
@@ -57,13 +58,13 @@ var host = Host.CreateDefaultBuilder(args)
         });
         services.AddHttpClient();
 
-        services.ConfigureAll<HttpClientFactoryOptions>(options =>
-        {
-            options.HttpMessageHandlerBuilderActions.Add(builder =>
-            {
-                builder.AdditionalHandlers.Add(builder.Services.GetRequiredService<TimingHandler>());
-            });
-        });
+        //services.ConfigureAll<HttpClientFactoryOptions>(options =>
+        //{
+        //    options.HttpMessageHandlerBuilderActions.Add(builder =>
+        //    {
+        //        builder.AdditionalHandlers.Add(builder.Services.GetRequiredService<TimingHandler>());
+        //    });
+        //});
 
 
 

@@ -5,6 +5,7 @@ using CarrierEngine.ExternalServices.Carriers.ExampleCarrier2;
 using CarrierEngine.ExternalServices.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using static MassTransit.ValidationResultExtensions;
 
 namespace CarrierEngine.Consumer.TrackingRequests
 {
@@ -30,18 +31,27 @@ namespace CarrierEngine.Consumer.TrackingRequests
             var a = _carrierFactory.GetCarrier<BaseCarrier>(context.Message.CarrierClassName);
 
             if (a is ITracking tracking)
-            { 
-                var result = await tracking.TrackLoad(context.Message);
+            {
 
                 var returnObject = new TrackingResponseDto()
                 {
                     BanyanLoadId = context.Message.BanyanLoadId,
-                    Message = result.Message
                 };
+
+                try
+                {
+                    var result = await tracking.TrackLoad(context.Message);
+                    returnObject.Message = result.Message;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "An error occurred tracking {BanyanLoadId}", context.Message.BanyanLoadId);
+                    returnObject.Message = "Error.";
+                    
+                }
+ 
             }
-
-       
-
+             
             _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} finished at {ProcessingCompleteDateUtc}.",
                 context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
 
