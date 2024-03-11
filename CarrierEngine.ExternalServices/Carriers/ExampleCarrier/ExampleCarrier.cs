@@ -1,66 +1,44 @@
 ﻿using System;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using CarrierEngine.Domain.Dtos;
 using CarrierEngine.ExternalServices.Carriers.ExampleCarrier.Dtos;
 using CarrierEngine.ExternalServices.Interfaces;
+using Flurl.Http;
 using Microsoft.Extensions.Logging;
 
 namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier;
 
-public class ExampleCarrier : ITracking, IRating, IDispatching
+public class ExampleCarrier : BaseCarrier, ITracking, IRating, IDispatching
 {
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<ExampleCarrier> _logger;
-    private readonly IOAuth2 _authenticator;
-
-    public ExampleCarrier(IHttpClientFactory httpClientFactory, ILogger<ExampleCarrier> logger,
-        TokenAuthenticator authenticator)
+    
+    public ExampleCarrier(ILogger<ExampleCarrier> logger, IRequestResponseLogger requestResponseLogger) : base(requestResponseLogger)
     {
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
-        _authenticator = authenticator;
+        _logger = logger; 
     }
 
     public async Task<TrackingResponseDto> TrackLoad(TrackingRequestDto requestDto)
     {
-        var authResponse =
-            await _authenticator.Authenticate<TokenResponse>(new Uri("http://echo.jsontest.com/access_token/TestToken"),
-                "", "", "", "");
-
-        var httpClient = _httpClientFactory.CreateClient();
 
         try
         {
 
-            using var result = await httpClient.GetAsync($"http://echo.jsontest.com/bol/{requestDto.BolNumber}/date/{DateTime.Now:s}/code/d1/message/delivered at location");
-            
-            var responseContent = await result.Content.ReadAsStringAsync();
+            using var authResult = await $"http://echo.jsontest.com/access_token/testtoken2"
+                .AfterCall(LogRequest)
+                .GetAsync();
 
-            if (!result.IsSuccessStatusCode)
-            {
-                var trackingResponse = new TrackingResponseDto()
-                {
-                    BanyanLoadId = requestDto.BanyanLoadId,
-                    Message = "Request failed"
-                };
-                trackingResponse.Errors.Add("");
-
-                return trackingResponse;
-            }
-
-            var serializerSettings =
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-            var test = JsonSerializer.Deserialize<TrackingResponse>(responseContent, serializerSettings);
+            var result =
+                await
+                    $"http://echo.jsontest.com/bol/{requestDto.BolNumber}/date/{DateTime.Now:s}/code/d1/message/delivered at location"
+                        .AfterCall(LogRequest)
+                        .GetJsonAsync<TrackingResponse>();
 
             return new TrackingResponseDto()
             {
                 BanyanLoadId = requestDto.BanyanLoadId,
-                Message = test.Message,
-                Code = test.Code,
-                StatuesDateTime = test.Date
+                Message = result.Message,
+                Code = result.Code,
+                StatuesDateTime = result.Date
             };
         }
         catch (Exception ex)
@@ -75,7 +53,10 @@ public class ExampleCarrier : ITracking, IRating, IDispatching
 
             return trackingResponse;
         }
-
+        finally
+        {
+            await SubmitLogs();
+        }
     }
 
     public Task RateLoad()

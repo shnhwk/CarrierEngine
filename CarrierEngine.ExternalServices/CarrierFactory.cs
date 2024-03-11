@@ -13,15 +13,12 @@ public class CarrierFactory : ICarrierFactory
         _serviceProvider = serviceProvider;
     }
 
-
-    public T GetCarrier<T>(string carrier)
+    public T GetCarrier<T>(string carrierName)
     {
-        var type = typeof(CarrierFactory).Assembly.GetTypes().FirstOrDefault(t => t.Name == carrier);
+        var type = typeof(CarrierFactory).Assembly.GetTypes().FirstOrDefault(t => t.Name == carrierName);
 
-        if (type == null)
-        {
+        if (type is null)
             return default;
-        }
 
         return (T)_serviceProvider.GetService(type);
     }

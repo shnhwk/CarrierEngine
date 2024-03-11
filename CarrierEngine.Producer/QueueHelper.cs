@@ -1,7 +1,6 @@
 ﻿using CarrierEngine.Domain;
 using MassTransit;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace CarrierEngine.Producer

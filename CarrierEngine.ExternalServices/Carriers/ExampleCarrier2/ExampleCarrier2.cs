@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Net;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using CarrierEngine.Domain.Dtos;
-using CarrierEngine.ExternalServices.Carriers.ExampleCarrier.Dtos;
 using CarrierEngine.ExternalServices.Interfaces;
 using Flurl.Http;
 using Microsoft.Extensions.Logging;
@@ -12,35 +11,40 @@ namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2
     public class ExampleCarrier2 : BaseCarrier, ITracking
     {
         private readonly ILogger<ExampleCarrier2> _logger;
+        private readonly IRequestResponseLogger _requestResponseLogger;
 
-        public ExampleCarrier2(ILogger<ExampleCarrier2> logger) : base(logger)
+        public ExampleCarrier2(ILogger<ExampleCarrier2> logger, IRequestResponseLogger requestResponseLogger)
+            : base(requestResponseLogger)
         {
             _logger = logger;
+            _requestResponseLogger = requestResponseLogger;
         }
 
         public async Task<TrackingResponseDto> TrackLoad(TrackingRequestDto trackingRequest)
         {
 
-            _logger.LogTrace("{MethodName} entered with parameters {trackingRequest}", nameof(TrackLoad), trackingRequest);
+            _logger.LogTrace("{MethodName} entered with parameters {@trackingRequest}", nameof(TrackLoad), trackingRequest);
 
             try
             {
                 var loginUrl =
-                    $"https://webhook.site/e19bcf57-b402-426b-851b-1c11b7f34a6f";
+                    $"https://webhook.site/88900963-3bc9-4afe-884d-3ea11268b01e";
 
-                var result = await loginUrl.WithTimeout(3)
-                    .AfterCall(call =>
-                    {
-                        _logger.LogInformation("Operation completed successfully in {Duration}ms", call.Duration?.TotalMilliseconds);
-                    }).OnError(error =>
-                    {
-                        _logger.LogWarning("It broke");
-                        // if we don't handle it here with this property, then we need to wrap the call in a try/catch 
-                        error.ExceptionHandled = true;
-                    })
-                    .GetAsync();
- 
-                 
+                try
+                {
+                    var result = await loginUrl.WithTimeout(3)
+                        .AfterCall(LogRequest)
+                        .WithOAuthBearerToken("tokenvalue")
+                        .PostJsonAsync(@"{""post"": ""hi""}")
+                        .ReceiveJson<Response>();
+                }
+                catch (FlurlHttpException ex)
+                {
+                    //do whatever else you want
+
+                    return TrackingResponseDto.Failure(new List<string> { "Auth failed" });
+                }
+                
             }
             catch (Exception ex)
             {
@@ -54,29 +58,19 @@ namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2
 
                 return trackingResponse;
             }
+            finally
+            {
+                await _requestResponseLogger.SubmitLogs();
+            }
+
+            return null;
 
         }
 
     }
 
-
-    public abstract class BaseCarrier
+    public class Response
     {
-        private readonly ILogger _logger;
-        private int LoadId { get; set; }
-
-        protected BaseCarrier(ILogger logger)
-        {
-            _logger = logger;
-        }
-
-        public BaseCarrier For(int loadId)
-        {
-            this.LoadId = loadId;
-
-
-            return this;
-        }
+        public string Data { get; set; }
     }
-
 }

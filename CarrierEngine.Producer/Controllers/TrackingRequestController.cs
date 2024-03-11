@@ -32,7 +32,7 @@ namespace CarrierEngine.Producer.Controllers
 
             try
             {
-                await QueueHelper.SentToMessageQueue(trackingRequestDto, RabbitMqConstants.TrackingRequestQueue, _bus, NewId.NextGuid(), trackingRequestDto.BanyanLoadId);
+                await QueueHelper.SentToMessageQueue(trackingRequestDto, RabbitMqConstants.TrackingRequestQueue, _bus, trackingRequestDto.CorrelationId, trackingRequestDto.BanyanLoadId);
             }
             catch (Exception ex)
             {

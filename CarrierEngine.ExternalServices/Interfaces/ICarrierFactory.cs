@@ -2,5 +2,5 @@
 
 public interface ICarrierFactory
 {
-    T GetCarrier<T>(string carrier);
+    T GetCarrier<T>(string carrierName);
 }

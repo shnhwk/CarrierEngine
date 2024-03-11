@@ -40,6 +40,26 @@ namespace CarrierEngine.Domain.Dtos
         public string Code { get; set; }
         public string Message { get; set; }
         public List<string> Errors { get; set; } = new List<string>();
+        public bool IsSuccess { get; set; }
+
+        public static TrackingResponseDto Failure(List<string> errors)
+        {
+            return new TrackingResponseDto
+            { 
+                Errors = errors,
+                IsSuccess = false
+            };
+        }
+         
+        public static TrackingResponseDto Success(int banyanLoadId, DateTime? statuesDateTime)
+        {
+            return new TrackingResponseDto
+            {
+                BanyanLoadId = banyanLoadId,
+                StatuesDateTime = statuesDateTime,
+                IsSuccess = true
+            };
+        }
     }
 
 

@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-using System.Threading.Tasks;
-using CarrierEngine.ExternalServices.Carriers.ExampleCarrier;
+﻿using System.Threading.Tasks;
 
 namespace CarrierEngine.ExternalServices.Interfaces;
 
