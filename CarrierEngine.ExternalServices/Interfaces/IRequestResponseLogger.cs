@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using static CarrierEngine.ExternalServices.FluerlRequestResponseLogger;
 
 namespace CarrierEngine.ExternalServices.Interfaces;
 
@@ -8,5 +9,5 @@ namespace CarrierEngine.ExternalServices.Interfaces;
 public interface IRequestResponseLogger 
 {
     public Task Log<T>(T response);
-    public Task SubmitLogs();
+    public Task SubmitLogs(int banyanLoadId, RequestResponseType requestResponseType);
 }

@@ -5,12 +5,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CarrierEngine.Consumer.TrackingRequests;
+using CarrierEngine.Data;
 using Microsoft.Extensions.Hosting;
 using CarrierEngine.Domain;
 using CarrierEngine.ExternalServices;
 using CarrierEngine.ExternalServices.Carriers;
 using CarrierEngine.ExternalServices.Interfaces;
 using MassTransit.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Serilog.Events;
@@ -27,39 +29,46 @@ Log.Logger = new LoggerConfiguration()
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
-    { 
-        services.AddScoped<IRequestResponseLogger, FluerlRequestResponseLogger>();
-    
-        services.AddHttpClient();
-    
-        services.AddMassTransit(x =>
-{
-    x.AddConsumers(typeof(TrackingRequestConsumer).Assembly);
-
-    x.UsingRabbitMq((context, cfg) =>
     {
+        services.AddScoped<IRequestResponseLogger, FluerlRequestResponseLogger>();
 
-        cfg.Host(new Uri(RabbitMqConstants.RabbitMqRootUri), h =>
+        services.AddHttpClient();
+
+        services.AddMassTransit(x =>
         {
-            h.Username(RabbitMqConstants.UserName);
-            h.Password(RabbitMqConstants.Password);
+            x.AddConsumers(typeof(TrackingRequestConsumer).Assembly);
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+
+                cfg.Host(new Uri(RabbitMqConstants.RabbitMqRootUri), h =>
+                {
+                    h.Username(RabbitMqConstants.UserName);
+                    h.Password(RabbitMqConstants.Password);
+                });
+
+                cfg.ReceiveEndpoint(RabbitMqConstants.TrackingRequestQueue, ep =>
+                {
+                    ep.UseSeriLogEnricher();
+
+                    ep.PrefetchCount = 50;
+                    ep.UseMessageRetry(r => r.Interval(2, 100));
+                    ep.ConfigureConsumer<TrackingRequestConsumer>(context);
+                });
+            });
         });
 
-        cfg.ReceiveEndpoint(RabbitMqConstants.TrackingRequestQueue, ep =>
-        {
-            ep.UseSeriLogEnricher();
+        services.AddDbContext<CarrierEngineDbContext>(x =>
+            x.UseSqlServer("Data Source=SHAWK02;Initial Catalog=CarrierEngine;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=Yes",//?? throw new InvalidConfigurationException("Invalid ShippingProduction4 connection string"),
+                o =>
+                {
+                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);//.UseCompatibilityLevel(120);
+                }));
 
-            ep.PrefetchCount = 50;
-            ep.UseMessageRetry(r => r.Interval(2, 100));
-            ep.ConfigureConsumer<TrackingRequestConsumer>(context);
-        });
-    });
-});
-         
- 
+
         services.AddHostedService<MassTransitService>();
         services.AddScoped<ICarrierFactory, CarrierFactory>();
-         
+
         services.Scan(scan => scan
                 .FromAssemblyOf<BaseCarrier>() // Scan the assembly containing the Startup class
                 .AddClasses(classes => classes.AssignableTo<BaseCarrier>()) // Filter classes assignable to HttpClient
@@ -74,7 +83,7 @@ var host = Host.CreateDefaultBuilder(args)
 
 
 await host.RunAsync();
- 
+
 
 
 public class MassTransitService : IHostedService

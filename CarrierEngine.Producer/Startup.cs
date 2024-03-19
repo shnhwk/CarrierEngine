@@ -20,7 +20,10 @@ namespace CarrierEngine.Producer
         public IConfiguration Configuration { get; }
 
         public void ConfigureServices(IServiceCollection services)
-        { 
+        {
+            services.AddProblemDetails();
+
+
             services.AddMassTransit(x =>
             {
                 x.AddBus(provider => Bus.Factory.CreateUsingRabbitMq(config =>
@@ -43,10 +46,22 @@ namespace CarrierEngine.Producer
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
+            //if (env.IsDevelopment())
+            //{
+            //    app.UseDeveloperExceptionPage();
+            //}
+
+
+            if (!env.IsDevelopment())
+            {
+                app.UseExceptionHandler();
+                app.UseHsts();
+            }
+            else
             {
                 app.UseDeveloperExceptionPage();
             }
+
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Carrier Engine Producer v1"));
 

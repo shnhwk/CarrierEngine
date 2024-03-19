@@ -42,5 +42,38 @@ namespace CarrierEngine.Producer.Controllers
 
             return Ok();
         }
+
+
+
+        /// <summary>
+        /// Used for manually tracking a shipment. 
+        /// </summary>
+        /// <param name="trackingRequestDto"></param>
+        /// <returns></returns>
+        [HttpPost("manual")]
+        public async Task<IActionResult> ManualTrack(TrackingRequestDto trackingRequestDto)
+        {
+            if (trackingRequestDto is null)
+            {
+                return BadRequest();
+            }
+
+            throw new Exception("test");
+
+
+            try
+            {
+                await Task.Delay(DateTime.Now.Second % 2 == 0 ? 4000 : 2000);
+
+                return Ok(new { Id = Guid.NewGuid() });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to send {@trackingRequestDto} to {RabbitMqConstants.TrackingRequestQueue}", trackingRequestDto, RabbitMqConstants.TrackingRequestQueue);
+                return StatusCode((int)HttpStatusCode.InternalServerError, "Unable to send message to queue.");
+            }
+
+
+        }
     }
 }

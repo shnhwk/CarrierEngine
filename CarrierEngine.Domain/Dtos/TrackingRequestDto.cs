@@ -4,33 +4,33 @@ using System.Collections.Generic;
 namespace CarrierEngine.Domain.Dtos
 {
 
-    public class BookingParams
-    {
-        //todo: better name for this class
-
+    public class SubscriptionDetails
+    { 
         public string ApiUsername { get; set; }
         public string ApiPassword { get; set; }
 
         public string WebUsername { get; set; }
         public string WebPassword { get; set; }
 
-        public string Miscellaneous { get; set; }
+        public string AccountId { get; set; }
         public string AccountNote { get; set; }
+
+        public string Miscellaneous { get; set; }
 
     }
 
     public class TrackingRequestDto
     {
-        public BookingParams BookingParams { get; set; }
         public string CarrierClassName { get; set; }
         public int BanyanLoadId { get; set; }
         public string BolNumber { get; set; }
         public string ProNumber { get; set; }
         public string PickupNumber { get; set; }
 
-        public Guid CorrelationId { get; set; } = Guid.NewGuid();
 
-        public ICarrierConfig CarrierConfig { get; set; }
+        public SubscriptionDetails SubscriptionDetails { get; set; }
+
+        public Guid CorrelationId { get; set; } = Guid.NewGuid();
     }
 
     public class TrackingResponseDto
@@ -38,15 +38,15 @@ namespace CarrierEngine.Domain.Dtos
         public int BanyanLoadId { get; set; }
         public DateTime? StatuesDateTime { get; set; }
         public string Code { get; set; }
-        public string Message { get; set; }
-        public List<string> Errors { get; set; } = new List<string>();
+        public string Message { get; set; } 
+        public string ErrorMessage { get; set; }  
         public bool IsSuccess { get; set; }
 
-        public static TrackingResponseDto Failure(List<string> errors)
+        public static TrackingResponseDto Failure(string errorMessage)
         {
             return new TrackingResponseDto
-            { 
-                Errors = errors,
+            {
+                ErrorMessage = errorMessage,
                 IsSuccess = false
             };
         }

@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CarrierEngine.Data\CarrierEngine.Data.csproj" />
     <ProjectReference Include="..\CarrierEngine.Domain\CarrierEngine.Domain.csproj" />
     <ProjectReference Include="..\CarrierEngine.ExternalServices\CarrierEngine.ExternalServices.csproj" />
   </ItemGroup>

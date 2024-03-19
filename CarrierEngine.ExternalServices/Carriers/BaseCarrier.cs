@@ -6,6 +6,8 @@ namespace CarrierEngine.ExternalServices.Carriers;
 
 public abstract class BaseCarrier
 {
+    protected int BanyanLoadId { get; set; }
+
     private readonly IRequestResponseLogger _requestResponseLogger;
 
     protected BaseCarrier(IRequestResponseLogger requestResponseLogger)
@@ -18,9 +20,14 @@ public abstract class BaseCarrier
         await _requestResponseLogger.Log(flurlCall);
     }
 
-    protected async Task SubmitLogs()
+    protected async Task SubmitLogs(FluerlRequestResponseLogger.RequestResponseType requestResponseType)
     {
-        await _requestResponseLogger.SubmitLogs();
+        await _requestResponseLogger.SubmitLogs(BanyanLoadId, requestResponseType);
     }
 
+    public BaseCarrier For(int loadId)
+    {
+        BanyanLoadId = loadId;
+        return this;
+    }
 }

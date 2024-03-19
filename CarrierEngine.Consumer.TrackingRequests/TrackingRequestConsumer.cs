@@ -22,11 +22,10 @@ namespace CarrierEngine.Consumer.TrackingRequests
         public async Task Consume(ConsumeContext<TrackingRequestDto> context)
         {
 
-            _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} started at {ProcessingStartDate}",
-                context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
+            _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} started at {ProcessingStartDate}", context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
 
-            var a = _carrierFactory.GetCarrier<BaseCarrier>(context.Message.CarrierClassName);
-
+            var a = _carrierFactory.GetCarrier<BaseCarrier>(context.Message.CarrierClassName).For(context.Message.BanyanLoadId);
+            
             if (a is ITracking tracking)
             {
                 var returnObject = new TrackingResponseDto()
@@ -43,7 +42,6 @@ namespace CarrierEngine.Consumer.TrackingRequests
                 {
                     _logger.LogError(ex, "An error occurred tracking {BanyanLoadId}", context.Message.BanyanLoadId);
                     returnObject.Message = "Error.";
-
                 }
             }
 

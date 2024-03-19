@@ -44,14 +44,7 @@ public class ExampleCarrier : BaseCarrier, ITracking, IRating, IDispatching
         catch (Exception ex)
         {
 
-            var trackingResponse = new TrackingResponseDto()
-            {
-                BanyanLoadId = requestDto.BanyanLoadId,
-                Message = "Shit failed"
-            };
-            trackingResponse.Errors.Add("");
-
-            return trackingResponse;
+            return TrackingResponseDto.Failure($"Authentication failed with {ex.Message}");
         }
         finally
         {

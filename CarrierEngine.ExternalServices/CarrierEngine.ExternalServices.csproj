@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CarrierEngine.Data\CarrierEngine.Data.csproj" />
     <ProjectReference Include="..\CarrierEngine.Domain\CarrierEngine.Domain.csproj" />
   </ItemGroup>
 
