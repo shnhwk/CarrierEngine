@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using CarrierEngine.Domain.Dtos;
-using CarrierEngine.ExternalServices.Carriers;
+using CarrierEngine.ExternalServices;
 using CarrierEngine.ExternalServices.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
@@ -21,27 +21,43 @@ namespace CarrierEngine.Consumer.TrackingRequests
 
         public async Task Consume(ConsumeContext<TrackingRequestDto> context)
         {
-
             _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} started at {ProcessingStartDate}", context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
 
-            var a = _carrierFactory.GetCarrier<BaseCarrier>(context.Message.CarrierClassName).For(context.Message.BanyanLoadId);
-            
-            if (a is ITracking tracking)
-            {
-                var returnObject = new TrackingResponseDto()
-                {
-                    BanyanLoadId = context.Message.BanyanLoadId,
-                };
+            var a = (await _carrierFactory.GetCarrier(context.Message.CarrierClassName));
 
+            await a.SetCarrierConfig(context.Message.CarrierClassName);
+
+
+
+            if (a is not ITracking tracking)
+            {
+                _logger.LogWarning(
+                    "Carrier {CarrierClassName} does not implement ITracking for {BanyanLoadId}. Returning.",
+                    context.Message.CarrierClassName, context.Message.BanyanLoadId);
+
+                return;
+            }
+
+            try
+            {
+                var result = await tracking.TrackLoad(context.Message);
+
+                _logger.LogDebug("Tracking result for Banyan Load {BanyanLoadId}: {ResultMessage}", context.Message.BanyanLoadId, result.Message);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred tracking {BanyanLoadId}", context.Message.BanyanLoadId);
+            }
+            finally
+            {
                 try
                 {
-                    var result = await tracking.TrackLoad(context.Message);
-                    returnObject.Message = result.Message;
+                    await a.SubmitLogs(RequestResponseType.TrackingRequest);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "An error occurred tracking {BanyanLoadId}", context.Message.BanyanLoadId);
-                    returnObject.Message = "Error.";
+                    _logger.LogError(ex, "Failed to submit logs for {BanyanLoadId}", context.Message.BanyanLoadId);
                 }
             }
 

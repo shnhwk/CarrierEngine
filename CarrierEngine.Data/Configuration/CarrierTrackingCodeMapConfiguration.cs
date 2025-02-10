@@ -21,6 +21,7 @@ public class CarrierTrackingCodeMapConfiguration : IEntityTypeConfiguration<Carr
         builder.Property(x => x.CarrierValue).HasColumnName(@"CarrierValue").HasColumnType("varchar(50)").IsRequired().IsUnicode(false).HasMaxLength(50);
         builder.Property(x => x.BanyanCode).HasColumnName(@"BanyanCode").HasColumnType("varchar(5)").IsRequired().IsUnicode(false).HasMaxLength(5);
         builder.Property(x => x.MatchingType).HasColumnName(@"MatchingType").HasColumnType("varchar(10)").IsRequired().IsUnicode(false).HasMaxLength(10);
+        builder.Property(x => x.BanyanStatusMap).HasColumnName(@"BanyanStatusMap").HasColumnType("int");
 
         // Foreign keys
         builder.HasOne(a => a.Carrier).WithMany(b => b.CarrierTrackingCodeMaps).HasForeignKey(c => c.CarrierId).OnDelete(DeleteBehavior.ClientSetNull).HasConstraintName("FK_CarrierTrackingCodeMap_Carrier");

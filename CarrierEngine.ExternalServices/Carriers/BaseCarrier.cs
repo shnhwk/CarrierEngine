@@ -1,33 +1,98 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using CarrierEngine.Data;
+using CarrierEngine.Data.Models;
+using CarrierEngine.Domain;
 using CarrierEngine.ExternalServices.Interfaces;
-using Flurl.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CarrierEngine.ExternalServices.Carriers;
 
-public abstract class BaseCarrier
+
+
+public abstract class BaseCarrier<TConfig> : ICarrier
 {
-    protected int BanyanLoadId { get; set; }
+    public readonly IHttpClientWrapper _httpHelper;
+   // private readonly ICarrierConfigManager _carrierConfigManager;
 
-    private readonly IRequestResponseLogger _requestResponseLogger;
+    protected TConfig Configuration;
 
-    protected BaseCarrier(IRequestResponseLogger requestResponseLogger)
+
+
+    protected BaseCarrier(IHttpClientWrapper httpHelper) //, ICarrierConfigManager carrierConfigManager)
     {
-        _requestResponseLogger = requestResponseLogger;
+        _httpHelper = httpHelper;
+      //  _carrierConfigManager = carrierConfigManager;
     }
 
-    protected async Task LogRequest(FlurlCall flurlCall)
+    private int BanyanLoadId { get; set; }
+
+    public async Task SetCarrierConfig(string key)
     {
-        await _requestResponseLogger.Log(flurlCall);
+        //Configuration = await _carrierConfigManager.Set<TConfig>(key);
+
+        var configManager = ServiceLocator.Instance.GetRequiredService<ICarrierConfigManager>();
+        Configuration = await configManager.Set<TConfig>(key);
     }
 
-    protected async Task SubmitLogs(FluerlRequestResponseLogger.RequestResponseType requestResponseType)
+
+
+    public async Task SubmitLogs(RequestResponseType requestResponseType)
     {
-        await _requestResponseLogger.SubmitLogs(BanyanLoadId, requestResponseType);
+        //await _httpHelper.SubmitLogs(BanyanLoadId, requestResponseType);
+    }
+ 
+}
+
+
+public class DataMapper<T>
+{
+    private readonly CarrierEngineDbContext _dbContext;
+    private readonly IDistributedCache _cache;
+
+    private List<CarrierTrackingCodeMap> Data;
+
+    private bool Initialized { get; set; }
+
+    public DataMapper(CarrierEngineDbContext dbContext, IDistributedCache cache)
+    {
+        _dbContext = dbContext;
+        _cache = cache;
     }
 
-    public BaseCarrier For(int loadId)
+    public async Task Map(string value)
     {
-        BanyanLoadId = loadId;
-        return this;
+        if (Initialized)
+            return;
+
+
+
+        var key = "";
+        var cachedData = await _cache.GetStringAsync(key);
+
+        if (cachedData != null)
+        {
+            Initialized = true;
+            Data = JsonSerializer.Deserialize<List<CarrierTrackingCodeMap>>(cachedData);
+        }
+
+        Data = await _dbContext.CarrierTrackingCodeMaps.Where(c => c.CarrierId == 2).ToListAsync();
+        Initialized = true;
+
+        var data = JsonSerializer.Serialize(Data);
+
+        // Cache the data with an expiration
+        await _cache.SetStringAsync(key, data, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        });
+
+
     }
+
 }

@@ -12,6 +12,7 @@ public class CarrierTrackingCodeMap
     public string CarrierValue { get; set; } // CarrierValue (length: 50)
     public string BanyanCode { get; set; } // BanyanCode (length: 5)
     public string MatchingType { get; set; } // MatchingType (length: 10)
+    public int? BanyanStatusMap { get; set; } // BanyanStatusMap (int?)
 
     // Foreign keys
 

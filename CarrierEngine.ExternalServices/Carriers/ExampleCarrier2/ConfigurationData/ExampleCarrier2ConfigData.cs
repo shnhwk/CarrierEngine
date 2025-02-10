@@ -2,7 +2,12 @@
 
 namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2.ConfigurationData;
 
-public class ExampleCarrier2ConfigData
+public abstract class BaseConfigData
+{
+
+}
+
+public class ExampleCarrier2ConfigData : BaseConfigData
 {
     [JsonPropertyName("defaultTimeoutSeconds")]
     public int DefaultTimeoutSeconds { get; set; }

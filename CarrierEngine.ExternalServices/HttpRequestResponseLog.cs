@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace CarrierEngine.ExternalServices;
- 
+
 
 public class RequestResponseInfo
 {
@@ -28,19 +29,25 @@ public class RequestResponseInfo
     public string Exception { get; set; }
 
     [JsonPropertyName("StatusCode")]
-    public string StatusCode { get; set; }
+    public int StatusCode { get; set; }
 
     [JsonPropertyName("DateTime")]
-    public string DateTime { get; set; }
+    public DateTime DateTime { get; set; }
 
-    [JsonPropertyName("Headers")]
-    public string Headers { get; set; }
+    [JsonPropertyName("RequestHeaders")]
+    public string RequestHeaders { get; set; }
+
+    [JsonPropertyName("ResponseHeaders")]
+    public string ResponseHeaders { get; set; }
 
     [JsonPropertyName("HostComputer")]
     public string HostComputer { get; set; }
 
-    [JsonPropertyName("Data")]
-    public string Data { get; set; }
+    [JsonPropertyName("RequestBody")]
+    public string RequestBody { get; set; }
+
+    [JsonPropertyName("ResponseBody")]
+    public string ResponseBody { get; set; }
 
     [JsonPropertyName("DurationMilliseconds")]
     public double DurationMilliseconds { get; set; }
@@ -52,6 +59,9 @@ public class HttpRequestResponseLog
     {
         RequestResponseInfo = new List<RequestResponseInfo>();
     }
+
+    [JsonPropertyName("LoadId")]
+    public int LoadId { get; set; }
 
     [JsonPropertyName("Type")]
     public string Type { get; set; }

@@ -1,9 +1,5 @@
 ﻿using MassTransit;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using CarrierEngine.Consumer.TrackingRequests;
 using CarrierEngine.Data;
 using Microsoft.Extensions.Hosting;
@@ -11,171 +7,98 @@ using CarrierEngine.Domain;
 using CarrierEngine.ExternalServices;
 using CarrierEngine.ExternalServices.Carriers;
 using CarrierEngine.ExternalServices.Interfaces;
-using MassTransit.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using Serilog.Events;
-using LogContext = Serilog.Context.LogContext;
+using Serilog.Exceptions;
+using Microsoft.Extensions.Configuration;
 
-
-//create the logger and setup your sinks, filters and properties
+// Create a bootstrap logger to capture startup issues
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
     .Enrich.FromLogContext()
-    .MinimumLevel.Verbose()
     .WriteTo.Console()
-    .WriteTo.Seq("http://localhost:5341/")
+    .WriteTo.File("logs/bootstrap.log", rollingInterval: RollingInterval.Day)
     .CreateBootstrapLogger();
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
-    {
-        services.AddScoped<IRequestResponseLogger, FluerlRequestResponseLogger>();
+try
+{
+    Log.Information("Starting host...");
 
-        services.AddHttpClient();
-
-        services.AddMassTransit(x =>
+    var host = Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration((context, config) =>
         {
-            x.AddConsumers(typeof(TrackingRequestConsumer).Assembly);
+            config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            config.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true);
+            config.AddEnvironmentVariables();
+        })
+        .UseSerilog((context, services, configuration) =>
+        {
+            configuration
+                .ReadFrom.Configuration(context.Configuration) // Load Serilog settings from appsettings.json
+                .Enrich.FromLogContext()
+                .Enrich.WithExceptionDetails()
+                .WriteTo.Console();
+        })
+        .ConfigureServices((context, services) =>
+        {
 
-            x.UsingRabbitMq((context, cfg) =>
+            services.AddDbContext<CarrierEngineDbContext>(x =>
+                x.UseSqlServer(
+                    context.Configuration.GetConnectionString("CarrierEngineDb"),
+                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)), ServiceLifetime.Transient);
+
+
+            services.AddHttpClient();
+            services.AddScoped<ICarrierConfigManager, CarrierCarrierConfigManagerManager>();
+            services.AddSingleton<IHttpClientWrapper, HttpClientWrapper>();
+            services.AddDistributedMemoryCache();
+
+            services.AddMassTransit(x =>
             {
+                x.AddConsumers(typeof(TrackingRequestConsumer).Assembly);
 
-                cfg.Host(new Uri(RabbitMqConstants.RabbitMqRootUri), h =>
+                x.UsingRabbitMq((context, cfg) =>
                 {
-                    h.Username(RabbitMqConstants.UserName);
-                    h.Password(RabbitMqConstants.Password);
-                });
+                    cfg.Host(new Uri(RabbitMqConstants.RabbitMqRootUri), h =>
+                    {
+                        h.Username(RabbitMqConstants.UserName);
+                        h.Password(RabbitMqConstants.Password);
+                    });
 
-                cfg.ReceiveEndpoint(RabbitMqConstants.TrackingRequestQueue, ep =>
-                {
-                    ep.UseSeriLogEnricher();
-
-                    ep.PrefetchCount = 50;
-                    ep.UseMessageRetry(r => r.Interval(2, 100));
-                    ep.ConfigureConsumer<TrackingRequestConsumer>(context);
+                    cfg.ReceiveEndpoint(RabbitMqConstants.TrackingRequestQueue, ep =>
+                    {
+                        ep.UseConsumeFilter(typeof(LoadIdLoggingMiddleware<>), context);
+                        ep.PrefetchCount = 50;
+                        ep.UseTimeout(c => c.Timeout = TimeSpan.FromMinutes(2));
+                        ep.UseMessageRetry(r => r.Interval(2, 100));
+                        ep.ConfigureConsumer<TrackingRequestConsumer>(context);
+                    });
                 });
             });
-        });
-
-        services.AddDbContext<CarrierEngineDbContext>(x =>
-            x.UseSqlServer("Data Source=SHAWK02;Initial Catalog=CarrierEngine;Integrated Security=True;MultipleActiveResultSets=True;TrustServerCertificate=Yes",//?? throw new InvalidConfigurationException("Invalid ShippingProduction4 connection string"),
-                o =>
-                {
-                    o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);//.UseCompatibilityLevel(120);
-                }));
 
 
-        services.AddHostedService<MassTransitService>();
-        services.AddScoped<ICarrierFactory, CarrierFactory>();
+            services.AddHostedService<MassTransitService>();
+            services.AddScoped<ICarrierFactory, CarrierFactory>();
 
-        services.Scan(scan => scan
-                .FromAssemblyOf<BaseCarrier>() // Scan the assembly containing the Startup class
-                .AddClasses(classes => classes.AssignableTo<BaseCarrier>()) // Filter classes assignable to HttpClient
-                .AsImplementedInterfaces() // Register as implemented interfaces
-                .AsSelf() // Register as self
-                .WithTransientLifetime() // Set the lifetime
-        );
-    })
-    .UseSerilog()
-    .Build();
+            services.Scan(scan => scan
+                    .FromAssemblyOf<CarrierFactory>()
+                    .AddClasses(classes => classes.AssignableTo(typeof(BaseCarrier<>)))
+                    .AsImplementedInterfaces()
+                    .AsSelf()
+                    .WithTransientLifetime());
+        })
+        .Build();
 
+    ServiceLocator.Initialize(host.Services);
 
-
-await host.RunAsync();
-
-
-
-public class MassTransitService : IHostedService
-{
-    private readonly IBusControl _busControl;
-    public MassTransitService(IBusControl busControl)
-    {
-        _busControl = busControl;
-    }
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        var source = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await _busControl.StartAsync(source.Token);
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await _busControl.StopAsync(cancellationToken);
-    }
+    await host.RunAsync();
 }
-
-
-//public static class CustomJsonSerializer
-//{
-//    private static readonly JsonSerializerOptions serializerSettings =
-//        new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-//    public static T Deserialize<T>(this string json)
-//    {
-//        return JsonSerializer.Deserialize<T>(json, serializerSettings);
-//    }
-//    // etc.
-//}
-
-
-
-public static class ExampleMiddlewareConfiguratorExtensions
+catch (Exception ex)
 {
-    public static void UseSeriLogEnricher<T>(this IPipeConfigurator<T> configurator)
-        where T : class, PipeContext
-    {
-        configurator.AddPipeSpecification(new SerilogEnricherSpecification<T>());
-    }
+    Log.Fatal(ex, "Application terminated unexpectedly");
 }
-
-public class SerilogEnricherSpecification<T> : IPipeSpecification<T> where T : class, PipeContext
+finally
 {
-    public IEnumerable<ValidationResult> Validate()
-    {
-        return Enumerable.Empty<ValidationResult>();
-    }
-
-    public void Apply(IPipeBuilder<T> builder)
-    {
-        builder.AddFilter(new SerilogEnricherFilter<T>());
-    }
-}
-
-public class SerilogEnricherFilter<T> : IFilter<T> where T : class, PipeContext
-{
-    public void Probe(ProbeContext context)
-    {
-        //var scope = context.CreateFilterScope("SerilogEnricher");
-        // scope.Add("CorrelationId", NewId.NextGuid());
-    }
-
-    public async Task Send(T context, IPipe<T> next)
-    {
-        var consumeContext = context.GetPayload<ConsumeContext>();
-
-        using (LogContext.PushProperty(nameof(consumeContext.CorrelationId), consumeContext.CorrelationId.GetValueOrDefault().ToString()))
-        using (LogContext.PushProperty(nameof(consumeContext.MessageId), consumeContext.MessageId.GetValueOrDefault().ToString()))
-        using (LogContext.PushProperty(nameof(consumeContext.RequestId), consumeContext.RequestId.GetValueOrDefault().ToString()))
-        using (LogContext.PushProperty("BanyanLoadId", consumeContext.GetHeader<int>("BanyanLoadId", -1)))
-        {
-            try
-            {
-                await next.Send(context).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (LogExceptionMessage(ex)) // This ensures we don't unwind the stack to log the exception
-            {
-                // This should never be entered
-                throw;
-            }
-        }
-
-    }
-
-    private static bool LogExceptionMessage(Exception e)
-    {
-        if (Log.IsEnabled(LogEventLevel.Debug))
-            Log.Debug("{0}", e.ToString());
-        return false;
-    }
+    Log.CloseAndFlush();
 }

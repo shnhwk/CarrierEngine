@@ -1,93 +1,87 @@
 ﻿using System;
-using System.Linq;
-using System.Text.Json;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using CarrierEngine.Data;
 using CarrierEngine.Domain.Dtos;
 using CarrierEngine.ExternalServices.Carriers.ExampleCarrier2.ConfigurationData;
 using CarrierEngine.ExternalServices.Carriers.ExampleCarrier2.Dtos;
 using CarrierEngine.ExternalServices.Interfaces;
-using Flurl;
-using Flurl.Http;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CarrierEngine.ExternalServices.Carriers.ExampleCarrier2
 {
-    public class ExampleCarrier2 : BaseCarrier, ITracking
-    { 
-        private readonly ILogger<ExampleCarrier2> _logger;
-        private readonly IRequestResponseLogger _requestResponseLogger;
-        private readonly CarrierEngineDbContext _dbContext;
+    public class ExampleCarrier2 : BaseCarrier<ExampleCarrier2ConfigData>, ITracking, IRating
+    {
 
-        public ExampleCarrier2(ILogger<ExampleCarrier2> logger, IRequestResponseLogger requestResponseLogger, CarrierEngineDbContext dbContext)
-            : base(requestResponseLogger)
+        private readonly ILogger<ExampleCarrier2> _logger;
+
+        private readonly IHttpClientWrapper _httpClientWrapper;
+
+
+        public ExampleCarrier2(ILogger<ExampleCarrier2> logger, IHttpClientWrapper httpClientWrapper) 
+            : base(httpClientWrapper)
         {
+
+            _httpClientWrapper = httpClientWrapper;
             _logger = logger;
-            _requestResponseLogger = requestResponseLogger;
-            _dbContext = dbContext;
         }
+
+        //public ExampleCarrier2(ILogger<ExampleCarrier2> logger,
+        //    IHttpClientWrapper httpClientWrapper,
+        //    ICarrierConfigManager carrierConfigManager) :
+        //    base(httpClientWrapper, carrierConfigManager)
+        //{
+
+        //    _httpClientWrapper = httpClientWrapper;
+        //    _logger = logger;
+        //}
 
         public async Task<TrackingResponseDto> TrackLoad(TrackingRequestDto trackingRequest)
-        { 
+        {
+
             _logger.LogTrace("{MethodName} entered with parameters {@trackingRequest}", nameof(TrackLoad), trackingRequest);
 
+            var baseUrl = Configuration.UseSandbox ? Configuration.SandboxBaseUrl : Configuration.ProdBaseUrl;
+
+
+            AuthResponse t;
             try
             {
-                var carrier = await _dbContext.Carriers.Include(c => c.CarrierTrackingCodeMaps)
-                                  .FirstOrDefaultAsync(c => c.CarrierKey == nameof(ExampleCarrier2)) 
-                              ?? throw new ArgumentException("No carrier data for Carrier {CarrierKey}", nameof(ExampleCarrier2));
-
-                var config = JsonSerializer.Deserialize<ExampleCarrier2ConfigData>(carrier.ConfigurationData);
-
-                var authUrl = Url.Combine(config.UseSandbox ? config.SandboxBaseUrl : config.ProdBaseUrl, config.AuthEndpoint);
-
-                AuthResponse authResponse;
-                try
-                {
-                    authResponse = await authUrl.WithTimeout(config.DefaultTimeoutSeconds)
-                        .AfterCall(LogRequest)
-                        .PostAsync()
-                        .ReceiveJson<AuthResponse>();
-                }
-                catch (FlurlHttpException ex)
-                {
-                    return TrackingResponseDto.Failure($"Authentication failed with {ex.Message}");
-                }
-
-                var trackingUrl = Url.Combine(config.UseSandbox ? config.SandboxBaseUrl : config.ProdBaseUrl, config.TrackingEndpoint);
-                try
-                {
-
-                    var trackingResponse = await trackingUrl.WithTimeout(config.DefaultTimeoutSeconds)
-                        .WithOAuthBearerToken(authResponse.AccessToken)
-                        .AfterCall(LogRequest)
-                        .PostAsync()
-                        .ReceiveJson<TrackingResponse>();
- 
-
-                    return TrackingResponseDto.Success(trackingRequest.BanyanLoadId, DateTime.UtcNow);
-
-
-                }
-                catch (FlurlHttpException ex)
-                {rxx
-                    return TrackingResponseDto.Failure($"Tracking request failed with {ex.Message}");
-                }
-
-
+                t = await _httpClientWrapper
+                    .WithTimeout(1)
+                    .WithHeader("", "")
+                    .WithHeaders(new Dictionary<string, string>())
+                    .WithBasicAuth("", "")
+                    .WithBearerToken("")
+                    .WithContentType(ContentType.ApplicationJson)
+                    .PostJsonAsync<AuthResponse>("", "", preserveHeaders: true);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                return TrackingResponseDto.Failure($"Authentication failed with {ex.Message}");
+                Console.WriteLine(e);
+                throw;
             }
-            finally
+
+
+
+            _logger.LogInformation("Out of call, checking token for {BanyanLoadId}.", trackingRequest.BanyanLoadId);
+
+
+            if (string.IsNullOrWhiteSpace(t?.AccessToken))
             {
-               
-                await SubmitLogs(FluerlRequestResponseLogger.RequestResponseType.TrackingRequest);
+                return TrackingResponseDto.Failure("Authentication failed: No access token returned.");
             }
-  
+
+
+
+            return TrackingResponseDto.Success(trackingRequest.BanyanLoadId, DateTime.UtcNow);
+
+
+
         }
 
+        public Task RateLoad()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

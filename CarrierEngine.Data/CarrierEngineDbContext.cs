@@ -22,13 +22,13 @@ public class CarrierEngineDbContext : DbContext
     public DbSet<Carrier> Carriers { get; set; } // Carrier
     public DbSet<CarrierTrackingCodeMap> CarrierTrackingCodeMaps { get; set; } // CarrierTrackingCodeMap
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseSqlServer(@"Data Source=SHAWK02;Initial Catalog=CarrierEngine;Integrated Security=True;MultipleActiveResultSets=True");
-        }
-    }
+    //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    //{
+    //    if (!optionsBuilder.IsConfigured)
+    //    {
+    //        optionsBuilder.UseSqlServer(@"Data Source=SHNHWK-INSPIRON\SQLEXPRESS;Initial Catalog=CarrierEngine;Integrated Security=True;MultipleActiveResultSets=True");
+    //    }
+    //}
      
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Text.Json;
 
 namespace CarrierEngine.Domain.Dtos
 {
@@ -29,6 +29,8 @@ namespace CarrierEngine.Domain.Dtos
 
 
         public SubscriptionDetails SubscriptionDetails { get; set; }
+
+        public JsonElement ConfigurationData { get; set; }
 
         public Guid CorrelationId { get; set; } = Guid.NewGuid();
     }

@@ -2,7 +2,7 @@
 
 namespace CarrierEngine.ExternalServices.Interfaces;
 
-public interface ICarrierFactory
+public interface ICarrierConfigManager
 {
-    Task<ICarrier> GetCarrier(string carrierName);
+    Task<T> Set<T>(string key);
 }

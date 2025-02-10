@@ -1,13 +1,9 @@
-﻿using System.Threading.Tasks;
-using static CarrierEngine.ExternalServices.FluerlRequestResponseLogger;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CarrierEngine.ExternalServices.Interfaces;
 
-/// <summary>
-/// Interface IRequestResponseLogger
-/// </summary>
-public interface IRequestResponseLogger 
+public interface IRequestResponseLogger
 {
-    public Task Log<T>(T response);
-    public Task SubmitLogs(int banyanLoadId, RequestResponseType requestResponseType);
+    Task SubmitLogs(int banyanLoadId, IList<HttpRequestResponseLog> logs, RequestResponseType requestResponseType);
 }
