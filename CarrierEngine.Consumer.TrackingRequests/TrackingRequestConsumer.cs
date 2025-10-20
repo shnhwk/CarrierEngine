@@ -27,12 +27,9 @@ namespace CarrierEngine.Consumer.TrackingRequests
 
             await a.SetCarrierConfig(context.Message.CarrierClassName);
 
-
-
             if (a is not ITracking tracking)
             {
-                _logger.LogWarning(
-                    "Carrier {CarrierClassName} does not implement ITracking for {BanyanLoadId}. Returning.",
+                _logger.LogWarning("Carrier {CarrierClassName} does not implement ITracking for {BanyanLoadId}. Returning.",
                     context.Message.CarrierClassName, context.Message.BanyanLoadId);
 
                 return;
@@ -61,8 +58,7 @@ namespace CarrierEngine.Consumer.TrackingRequests
                 }
             }
 
-            _logger.LogInformation(
-                "Tracking request for Banyan Load {BanyanLoadId} finished at {ProcessingCompleteDateUtc}.",
+            _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} finished at {ProcessingCompleteDateUtc}.",
                 context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
         }
     }

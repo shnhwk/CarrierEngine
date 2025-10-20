@@ -9,11 +9,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using CarrierEngine.ExternalServices.Interfaces;
 
 namespace CarrierEngine.ExternalServices;
 
 public class HttpClientWrapper : IHttpClientWrapper
 {
+    private readonly IRequestResponseLogger _requestResponseLogger;
     private readonly HttpClient _httpClient;
     private readonly List<RequestResponseInfo> _logs = new();
     private TimeSpan? _customTimeout;
@@ -22,8 +24,9 @@ public class HttpClientWrapper : IHttpClientWrapper
     private readonly Dictionary<string, string> _headers = new();
     private readonly Dictionary<string, string> _queryParameters = new();
 
-    public HttpClientWrapper(IHttpClientFactory httpClientFactory)
+    public HttpClientWrapper(IHttpClientFactory httpClientFactory, IRequestResponseLogger requestResponseLogger)
     {
+        _requestResponseLogger = requestResponseLogger;
         _cookieContainer = new CookieContainer();
 
         _httpClient = httpClientFactory.CreateClient();
@@ -81,6 +84,11 @@ public class HttpClientWrapper : IHttpClientWrapper
         };
 
         return WithContentType(contentTypeString);
+    }
+
+    public async Task SubmitLogs(int banyanLoadId, RequestResponseType requestResponseType)
+    {
+        await _requestResponseLogger.SubmitLogs(banyanLoadId, Logs, requestResponseType);
     }
 
     public IHttpClientWrapper WithBasicAuth(string username, string password)

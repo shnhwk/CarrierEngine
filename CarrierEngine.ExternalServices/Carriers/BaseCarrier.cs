@@ -13,38 +13,29 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CarrierEngine.ExternalServices.Carriers;
 
-
-
 public abstract class BaseCarrier<TConfig> : ICarrier
 {
-    public readonly IHttpClientWrapper _httpHelper;
-   // private readonly ICarrierConfigManager _carrierConfigManager;
-
+    private readonly IHttpClientWrapper _httpHelper;
     protected TConfig Configuration;
 
 
 
-    protected BaseCarrier(IHttpClientWrapper httpHelper) //, ICarrierConfigManager carrierConfigManager)
+    protected BaseCarrier(IHttpClientWrapper httpHelper) 
     {
         _httpHelper = httpHelper;
-      //  _carrierConfigManager = carrierConfigManager;
     }
 
     private int BanyanLoadId { get; set; }
 
     public async Task SetCarrierConfig(string key)
     {
-        //Configuration = await _carrierConfigManager.Set<TConfig>(key);
-
         var configManager = ServiceLocator.Instance.GetRequiredService<ICarrierConfigManager>();
         Configuration = await configManager.Set<TConfig>(key);
     }
 
-
-
     public async Task SubmitLogs(RequestResponseType requestResponseType)
     {
-        //await _httpHelper.SubmitLogs(BanyanLoadId, requestResponseType);
+        await _httpHelper.SubmitLogs(BanyanLoadId, requestResponseType);
     }
  
 }

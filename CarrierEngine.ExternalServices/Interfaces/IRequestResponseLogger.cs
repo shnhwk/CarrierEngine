@@ -5,5 +5,5 @@ namespace CarrierEngine.ExternalServices.Interfaces;
 
 public interface IRequestResponseLogger
 {
-    Task SubmitLogs(int banyanLoadId, IList<HttpRequestResponseLog> logs, RequestResponseType requestResponseType);
+    Task SubmitLogs(int banyanLoadId, IReadOnlyCollection<RequestResponseInfo> logs, RequestResponseType requestResponseType);
 }

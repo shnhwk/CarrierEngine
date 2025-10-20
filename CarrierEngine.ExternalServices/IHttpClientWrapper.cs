@@ -47,4 +47,5 @@ public interface IHttpClientWrapper
     IHttpClientWrapper WithBearerToken(string token);
     IHttpClientWrapper WithContentType(string contentType);
     IHttpClientWrapper WithContentType(ContentType contentType);
+    Task SubmitLogs(int banyanLoadId, RequestResponseType requestResponseType);
 }

@@ -5,6 +5,8 @@ using Serilog;
 using Serilog.Events;
 using LogContext = Serilog.Context.LogContext;
 
+namespace CarrierEngine.Consumer.TrackingRequests;
+
 public class LoadIdLoggingMiddleware<T> : IFilter<ConsumeContext<T>> where T : class
 {
     public async Task Send(ConsumeContext<T> context, IPipe<ConsumeContext<T>> next)

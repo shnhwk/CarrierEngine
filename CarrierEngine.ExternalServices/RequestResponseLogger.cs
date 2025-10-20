@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using CarrierEngine.Data;
 using CarrierEngine.ExternalServices.Interfaces;
@@ -18,16 +19,21 @@ public class RequestResponseLogger : IRequestResponseLogger
         _dbContext = dbContext;
     }
 
-    public async Task SubmitLogs(int banyanLoadId, IList<HttpRequestResponseLog> logs, RequestResponseType requestResponseType)
+    public async Task SubmitLogs(int banyanLoadId, IReadOnlyCollection<RequestResponseInfo> logs, RequestResponseType requestResponseType)
     {
         try
         {
             //simulate DB action
             await Task.Delay(100);
 
+            var h = new HttpRequestResponseLog();
+            h.LoadId = banyanLoadId;
+            h.RequestResponseInfo = logs.ToList();
+            h.Type = requestResponseType.ToString();
+
             foreach (var requestLog in logs)
             {
-                _logger.LogInformation("Logging request/response {type} for {BanyanLoadId} number {number}", requestLog.Type, banyanLoadId, requestLog.Number);
+                _logger.LogInformation("Logging request/response {type} for {BanyanLoadId} number {number}", requestLog.Type, banyanLoadId, 1);
             }
 
             _logger.LogInformation("{count} Logs submitted!", logs.Count);
