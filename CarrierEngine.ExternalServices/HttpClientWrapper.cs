@@ -115,14 +115,7 @@ public class HttpClientWrapper : IHttpClientWrapper
             throw new ArgumentException("Query parameter name contains invalid characters", nameof(name));
         }
 
-        if (!_queryParameters.ContainsKey(name))
-        {
-            _queryParameters.Add(name, HttpUtility.UrlEncode(value));
-        }
-        else
-        {
-            _queryParameters[name] = HttpUtility.UrlEncode(value);
-        }
+        _queryParameters[name] = HttpUtility.UrlEncode(value);
 
         return this;
 
@@ -151,17 +144,7 @@ public class HttpClientWrapper : IHttpClientWrapper
         }
     }
 
-    // Generic GET method with response deserialization
-    public async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken = default)
-    {
-        return await SendAndReceiveAsync<T>(HttpMethod.Get, url, null, cancellationToken);
-    }
 
-    // Generic POST method with request serialization and response deserialization
-    public async Task<T> PostAsync<T>(string url, object content, CancellationToken cancellationToken = default)
-    {
-        return await SendAndReceiveAsync<T>(HttpMethod.Post, url, content, cancellationToken);
-    }
 
     public async Task<TOut> PostJsonAsync<TOut>(string url, string jsonContent, bool preserveHeaders = false, CancellationToken cancellationToken = default)
     {
@@ -198,38 +181,61 @@ public class HttpClientWrapper : IHttpClientWrapper
         if (!preserveHeaders)
             _headers.Clear();
 
-        return JsonSerializer.Deserialize<TOut>(responseBody) ?? throw new JsonException("Failed to deserialize response");
+        return JsonSerializer.Deserialize<TOut>(responseBody, JsonDefaults.Options) ?? throw new JsonException("Failed to deserialize response");
     }
 
-    public async Task<T> PostFormUrlEncodedAsync<T>(string url, Dictionary<string, string> formData, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<T?>> PostFormUrlEncodedAsync<T>(string url, Dictionary<string, string> formData, CancellationToken cancellationToken = default)
     {
         var form = new FormUrlEncodedContent(formData);
 
         return await SendAndReceiveAsync<T>(HttpMethod.Post, url, form, cancellationToken);
     }
 
+
+
+
+
+    // Generic GET method with response deserialization
+    public async Task<ApiResult<T?>> GetAsync<T>(string url, CancellationToken cancellationToken = default)
+    {
+        return await SendAndReceiveAsync<T>(HttpMethod.Get, url, null, cancellationToken);
+    }
+
+    // Generic POST method with request serialization and response deserialization
+    public async Task<ApiResult<T?>> PostAsync<T>(string url, object content, CancellationToken cancellationToken = default)
+    {
+        return await SendAndReceiveAsync<T>(HttpMethod.Post, url, content, cancellationToken);
+    }
+
     // Generic PUT method with request serialization and response deserialization
-    public async Task<T> PutAsync<T>(string url, object content, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<T?>> PutAsync<T>(string url, object content, CancellationToken cancellationToken = default)
     {
         return await SendAndReceiveAsync<T>(HttpMethod.Put, url, content, cancellationToken);
     }
 
     // Generic PATCH method with request serialization and response deserialization
-    public async Task<T> PatchAsync<T>(string url, object content, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<T?>> PatchAsync<T>(string url, object content, CancellationToken cancellationToken = default)
     {
         return await SendAndReceiveAsync<T>(HttpMethod.Patch, url, content, cancellationToken);
     }
 
     // Generic DELETE method with response deserialization
-    public async Task<T> DeleteAsync<T>(string url, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<T?>> DeleteAsync<T>(string url, CancellationToken cancellationToken = default)
     {
         return await SendAndReceiveAsync<T>(HttpMethod.Delete, url, null, cancellationToken);
     }
 
     // Private helper method to handle serialization, logging, and deserialization
-    private async Task<T> SendAndReceiveAsync<T>(HttpMethod method, string url, object content = null, CancellationToken cancellationToken = default)
+    private async Task<ApiResult<T?>> SendAndReceiveAsync<T>(HttpMethod method, string url, object content = null, CancellationToken cancellationToken = default)
     {
+
+        var queryString = BuildQueryString();
+        url = url + queryString;
+
         var request = new HttpRequestMessage(method, url);
+
+        ApplyHeaders(request);
+
 
         // Serialize request content to JSON if present
         if (content != null)
@@ -250,14 +256,36 @@ public class HttpClientWrapper : IHttpClientWrapper
 
         // Send the request and log the response
         var response = await SendAsync(request, effectiveCancellationToken);
-
-        // Deserialize the response body to the specified type T
         var responseBody = await response.Content.ReadAsStringAsync(effectiveCancellationToken);
-        return JsonSerializer.Deserialize<T>(responseBody) ?? throw new JsonException("Failed to deserialize response");
+
+        // If the response was not successful, optionally handle/log/throw
+        if (!response.IsSuccessStatusCode)
+        {
+            // You could log details here if needed:
+            // _logger.LogWarning("Received {StatusCode} from {Url}: {Body}", response.StatusCode, url, responseBody);
+            return ApiResult<T?>.FromError(response.StatusCode, responseBody, response.ReasonPhrase); // or throw new HttpRequestException($"Unexpected status: {response.StatusCode}");
+        }
+
+        // If there’s no content, return default instead of failing deserialization
+        if (string.IsNullOrWhiteSpace(responseBody))
+            return ApiResult<T?>.FromSuccess(default, response.StatusCode, responseBody);
+
+        // Try to deserialize; throw a controlled exception if it fails
+        try
+        {
+            var returnO = JsonSerializer.Deserialize<T>(responseBody, JsonDefaults.Options)
+                   ?? throw new JsonException($"Failed to deserialize response from {url}");
+
+            return ApiResult<T?>.FromSuccess(returnO, response.StatusCode, responseBody);
+        }
+        catch (JsonException ex)
+        {
+            return ApiResult<T?>.FromError(response.StatusCode, responseBody, ex.Message);
+        }
     }
 
     // Internal SendAsync method to log each request and response
-    public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
+    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
     {
         // Initialize the log entry
         var logEntry = new RequestResponseInfo
@@ -265,7 +293,7 @@ public class HttpClientWrapper : IHttpClientWrapper
             Type = "Request",
             //CorrelationId = _correlationId,
             Soap = false,
-            Url = request.RequestUri?.ToString(),
+            Url = request.RequestUri?.ToString() ?? string.Empty,
             Method = request.Method.Method,
             RequestHeaders = JsonSerializer.Serialize(request.Headers),
             DateTime = DateTime.Now
@@ -344,4 +372,21 @@ public class HttpClientWrapper : IHttpClientWrapper
     {
         return _cookieContainer.GetCookies(uri);
     }
+}
+
+public class ApiResult<T>
+{
+    public bool Success { get; init; }
+    public bool Failure => !Success;
+
+    public HttpStatusCode StatusCode { get; init; }
+    public string? RawBody { get; init; }
+    public T? Data { get; init; }
+    public string? ErrorMessage { get; init; }
+
+    public static ApiResult<T> FromSuccess(T data, HttpStatusCode code, string rawBody) =>
+        new() { Success = true, Data = data, StatusCode = code, RawBody = rawBody };
+
+    public static ApiResult<T> FromError(HttpStatusCode code, string? body, string? message = null) =>
+        new() { Success = false, StatusCode = code, RawBody = body, ErrorMessage = message };
 }

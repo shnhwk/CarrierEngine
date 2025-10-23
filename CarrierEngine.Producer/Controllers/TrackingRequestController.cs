@@ -2,7 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using CarrierEngine.Domain;
-using CarrierEngine.Domain.Dtos;
+using CarrierEngine.Domain.Dtos.Tracking;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;

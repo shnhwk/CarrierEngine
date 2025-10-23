@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using CarrierEngine.Domain.Dtos;
+using CarrierEngine.Domain.Dtos.Tracking;
 
 namespace CarrierEngine.ExternalServices.Interfaces;
 

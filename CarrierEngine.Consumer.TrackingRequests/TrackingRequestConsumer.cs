@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using CarrierEngine.Domain.Dtos;
+using CarrierEngine.Domain.Dtos.Tracking;
 using CarrierEngine.ExternalServices;
 using CarrierEngine.ExternalServices.Interfaces;
 using MassTransit;
@@ -23,14 +23,13 @@ namespace CarrierEngine.Consumer.TrackingRequests
         {
             _logger.LogInformation("Tracking request for Banyan Load {BanyanLoadId} started at {ProcessingStartDate}", context.Message.BanyanLoadId, DateTimeOffset.UtcNow);
 
-            var a = (await _carrierFactory.GetCarrier(context.Message.CarrierClassName));
+            var a = await _carrierFactory.GetCarrier(context.Message.CarrierClassName);
 
             await a.SetCarrierConfig(context.Message.CarrierClassName);
 
             if (a is not ITracking tracking)
             {
-                _logger.LogWarning("Carrier {CarrierClassName} does not implement ITracking for {BanyanLoadId}. Returning.",
-                    context.Message.CarrierClassName, context.Message.BanyanLoadId);
+                _logger.LogWarning("Carrier {CarrierClassName} does not implement ITracking for {BanyanLoadId}. Returning.", context.Message.CarrierClassName, context.Message.BanyanLoadId);
 
                 return;
             }

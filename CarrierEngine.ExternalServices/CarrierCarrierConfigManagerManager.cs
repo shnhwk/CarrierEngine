@@ -32,7 +32,7 @@ public class CarrierCarrierConfigManagerManager : ICarrierConfigManager
     public async Task<T> Set<T>(string key)
     {
         //TODO: cache
-        var configString = await _dbContext.Carriers.Select(c => c.ConfigurationData).FirstOrDefaultAsync();
+        var configString = await _dbContext.Carriers.Where(c=>c.CarrierKey == key).Select(c => c.ConfigurationData).FirstOrDefaultAsync();
 
         configString = Regex.Replace(configString, @"[^\u0000-\u007F]+", string.Empty);
 

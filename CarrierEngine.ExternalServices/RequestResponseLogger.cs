@@ -34,6 +34,7 @@ public class RequestResponseLogger : IRequestResponseLogger
             foreach (var requestLog in logs)
             {
                 _logger.LogInformation("Logging request/response {type} for {BanyanLoadId} number {number}", requestLog.Type, banyanLoadId, 1);
+                _logger.LogInformation("Log {@log}", requestLog);
             }
 
             _logger.LogInformation("{count} Logs submitted!", logs.Count);

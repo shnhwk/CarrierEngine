@@ -16,9 +16,9 @@ public interface IHttpClientWrapper
     IReadOnlyCollection<RequestResponseInfo> Logs { get; }
 
     // HTTP operations with generic deserialization
-    Task<T> GetAsync<T>(string url, CancellationToken cancellationToken = default);
+    Task<ApiResult<T?>> GetAsync<T>(string url, CancellationToken cancellationToken = default);
 
-    Task<T> PostAsync<T>(string url, object content, CancellationToken cancellationToken = default);
+    Task<ApiResult<T?>> PostAsync<T>(string url, object content, CancellationToken cancellationToken = default);
 
 
     Task<TOut> PostJsonAsync<TOut>(string url, string jsonContent, bool preserveHeaders = false, CancellationToken cancellationToken = default);
@@ -29,9 +29,9 @@ public interface IHttpClientWrapper
 
 
 
-    Task<T> PutAsync<T>(string url, object content, CancellationToken cancellationToken = default);
-    Task<T> PatchAsync<T>(string url, object content, CancellationToken cancellationToken = default);
-    Task<T> DeleteAsync<T>(string url, CancellationToken cancellationToken = default);
+    Task<ApiResult<T?>> PutAsync<T>(string url, object content, CancellationToken cancellationToken = default);
+    Task<ApiResult<T?>> PatchAsync<T>(string url, object content, CancellationToken cancellationToken = default);
+    Task<ApiResult<T?>> DeleteAsync<T>(string url, CancellationToken cancellationToken = default);
 
     // Methods to set and retrieve cookies
     void SetCookie(Uri uri, string name, string value);

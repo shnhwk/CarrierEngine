@@ -35,7 +35,7 @@ try
         .UseSerilog((context, services, configuration) =>
         {
             configuration
-                .ReadFrom.Configuration(context.Configuration) // Load Serilog settings from appsettings.json
+                .ReadFrom.Configuration(context.Configuration)
                 .Enrich.FromLogContext()
                 .Enrich.WithExceptionDetails()
                 .WriteTo.Console();
@@ -46,13 +46,18 @@ try
             services.AddDbContext<CarrierEngineDbContext>(x =>
                 x.UseSqlServer(
                     context.Configuration.GetConnectionString("CarrierEngineDb"),
-                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)), ServiceLifetime.Transient);
+                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 
             services.AddHttpClient();
             services.AddScoped<ICarrierConfigManager, CarrierCarrierConfigManagerManager>();
-            services.AddSingleton<IHttpClientWrapper, HttpClientWrapper>();
+
+            services.AddScoped<ITrackingStatusMapper, TrackingStatusMapper>();
+            services.AddScoped<IRequestResponseLogger, RequestResponseLogger>();
+            services.AddScoped<IHttpClientWrapper, HttpClientWrapper>();
+
             services.AddDistributedMemoryCache();
+            services.AddMemoryCache();
 
             services.AddMassTransit(x =>
             {
@@ -86,11 +91,9 @@ try
                     .AddClasses(classes => classes.AssignableTo(typeof(BaseCarrier<>)))
                     .AsImplementedInterfaces()
                     .AsSelf()
-                    .WithTransientLifetime());
+                    .WithScopedLifetime());
         })
         .Build();
-
-    ServiceLocator.Initialize(host.Services);
 
     await host.RunAsync();
 }
