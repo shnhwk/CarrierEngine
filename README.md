@@ -1,4 +1,4 @@
-# Carrier Engine POC with RabbitMQ, MassTransit and Docker 
+# Carrier Engine POC with RabbitMQ, and Docker 
 
 ## Start up a RabbitMQ image
 > docker run -d -p 5672:5672 -p 15672:15672 --hostname my-rabbit --name rabbitmq-local rabbitmq:3-management
