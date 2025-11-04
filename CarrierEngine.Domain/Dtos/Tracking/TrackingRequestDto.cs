@@ -77,9 +77,4 @@ public class TrackingRequestDto
     /// </summary>
     [JsonPropertyName("subscriptionData")]
     public SubscriptionDetails SubscriptionData { get; set; }
-
-    /// <summary>
-    /// Correlation Id for tracking requests through the system
-    /// </summary>
-    public Guid CorrelationId { get; set; } = Guid.NewGuid();
 }

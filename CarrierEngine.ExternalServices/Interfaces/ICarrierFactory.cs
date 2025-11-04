@@ -1,8 +1,0 @@
-﻿using System.Threading.Tasks;
-
-namespace CarrierEngine.ExternalServices.Interfaces;
-
-public interface ICarrierFactory
-{
-    Task<ICarrier> GetCarrier(string carrierName);
-}
