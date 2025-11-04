@@ -1,38 +1,110 @@
-﻿using MassTransit;
-using System;
+﻿using System;
+using CarrierEngine.Consumer.TrackingRequests;
+using Microsoft.Extensions.Hosting;
 using CarrierEngine.Domain;
-using GreenPipes;
+using CarrierEngine.Domain.Interfaces;
+using CarrierEngine.Infrastructure.Data;
+using CarrierEngine.Infrastructure.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+using Serilog.Exceptions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using CarrierEngine.Infrastructure.Queues;
+using CarrierEngine.Infrastructure.Jobs;
+using CarrierEngine.Integrations.Carriers;
+using CarrierEngine.Domain.Settings;
 
-namespace CarrierEngine.Consumer.TrackingRequests
+
+// Create a bootstrap logger to capture startup issues
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/bootstrap.log", rollingInterval: RollingInterval.Day)
+    .CreateBootstrapLogger();
+
+try
 {
-    class Program
-    {
-        static void Main(string[] args)
+    Log.Information("Starting host...");
+
+    var host = Host.CreateDefaultBuilder(args)
+        .ConfigureAppConfiguration((context, config) =>
         {
-            Console.Title = "Tracking Request";
+            config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            config.AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true);
+            config.AddEnvironmentVariables();
+        })
+        .UseSerilog((context, _, configuration) =>
+        {
+            configuration
+                .ReadFrom.Configuration(context.Configuration)
+                .Enrich.FromLogContext()
+                .Enrich.WithExceptionDetails()
+                .WriteTo.Console();
+        })
+        .ConfigureServices((context, services) =>
+        {
 
-            var bus = Bus.Factory.CreateUsingRabbitMq(cfg =>
+            services.AddDbContext<CarrierEngineDbContext>(x =>
+                x.UseSqlServer(
+                    context.Configuration.GetConnectionString("CarrierEngineDb"),
+                    o => o.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
+
+            services.AddHttpClient();
+            services.AddScoped<ICarrierConfigManager, CarrierConfigManager>();
+            services.AddSingleton<IJobStatusUpdater, JobStatusUpdater>();
+
+            services.AddScoped<ITrackingStatusMapper, TrackingStatusMapper>();
+            services.AddScoped<IRequestResponseLogger, RequestResponseLogger>();
+            services.AddScoped<IHttpClientWrapper, HttpClientWrapper>();
+            services.AddScoped<ITrackingJobHandler, TrackingJobHandler>();
+
+            services.AddSingleton<IRabbitConnectionFactory, RabbitConnectionFactory>();
+            services.AddSingleton<IRabbitQueuePublisher, RabbitQueuePublisher>();
+
+
+            services.AddScoped<CarrierDependencies>(sp => new CarrierDependencies
             {
-                cfg.Host(new Uri(RabbitMqConstants.RabbitMqRootUri), h =>
-                {
-                    h.Username(RabbitMqConstants.UserName);
-                    h.Password(RabbitMqConstants.Password);
-                });
-
-                cfg.ReceiveEndpoint(RabbitMqConstants.TrackingRequestQueue, ep =>
-                {
-                    ep.PrefetchCount = 50;
-                    ep.UseMessageRetry(r => r.Interval(2, 100));
-                    ep.Consumer<TrackingRequestConsumerNotification>();
-                });
+                Http = sp.GetRequiredService<IHttpClientWrapper>(),
+                Config = sp.GetRequiredService<ICarrierConfigManager>(),
+                TrackingMap = sp.GetRequiredService<ITrackingStatusMapper>(),
+                LoggerFactory = sp.GetRequiredService<ILoggerFactory>()
             });
 
-            bus.StartAsync();
+            services.AddDistributedMemoryCache();
+            services.AddMemoryCache();
 
-            Console.WriteLine("Listening for Tracking Request events. Press enter to exit");
-            Console.ReadLine();
+            var rabbitOptions = context.Configuration
+                .GetSection("RabbitMq")
+                .Get<RabbitMqOptions>() ?? throw new Exception("RabbitMq section not found in appsettings.json");
 
-            bus.StopAsync();
-        }
-    }
+            services.AddHostedService(sp =>
+                new TrackingConsumer(
+                    sp.GetRequiredService<ILogger<TrackingConsumer>>(),
+                    sp.GetRequiredService<IRabbitConnectionFactory>(),
+                    sp.GetRequiredService<IServiceScopeFactory>(), 
+                    queueName: rabbitOptions.TrackingQueue));
+             
+            services.AddScoped<ICarrierFactory, CarrierFactory>();
+
+            services.Scan(scan => scan
+                    .FromAssemblyOf<CarrierFactory>()
+                    .AddClasses(classes => classes.AssignableTo(typeof(BaseCarrier<>)))
+                    .AsImplementedInterfaces()
+                    .AsSelf()
+                    .WithScopedLifetime());
+        })
+        .Build();
+
+    await host.RunAsync();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
 }

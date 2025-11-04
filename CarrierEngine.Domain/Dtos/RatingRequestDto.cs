@@ -2,6 +2,12 @@
 {
     public class RatingRequestDto
     {
+        public RatingRequestDto()
+        {
+            Carrier = string.Empty;
+            Product = string.Empty;
+        }
+
         public string Carrier { get; set; }
         public int BanyanLoadId { get; set; }
         public int Quantity { get; set; }
@@ -10,8 +16,13 @@
 
     public class RatingResponseDto
     {
+        public RatingResponseDto()
+        {
+            QuoteNumber = string.Empty;
+        }
+
         public int BanyanLoadId { get; set; }
-        public string QuoteNumber { get; set; } 
+        public string QuoteNumber { get; set; }
         public double QuoteAmount { get; set; }
     }
-} 
+}
